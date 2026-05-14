@@ -1,0 +1,17 @@
+node_modules/
+dist/
+
+.ctx/
+.ctxrc.local.json
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+*.tsbuildinfo
+.env
+.env.*
