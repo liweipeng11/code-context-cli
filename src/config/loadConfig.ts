@@ -3,6 +3,11 @@ import { CtxConfig, defaultConfig } from "./defaultConfig";
 import { getConfigPath } from "../utils/pathUtils";
 
 function mergeConfig(input: any): CtxConfig {
+  /*
+   * 配置文件是用户可编辑的，所以这里做防御式合并：
+   * - 字段类型正确就使用用户值；
+   * - 字段缺失或类型不对就回退默认值。
+   */
   return {
     include: Array.isArray(input.include) ? input.include : defaultConfig.include,
     exclude: Array.isArray(input.exclude) ? input.exclude : defaultConfig.exclude,
@@ -21,6 +26,7 @@ function mergeConfig(input: any): CtxConfig {
 export function loadConfig(rootDir: string): CtxConfig {
   var configPath = getConfigPath(rootDir);
   if (!fs.existsSync(configPath)) {
+    // 没有执行 ctx init 时也允许 index/search 使用默认配置。
     return defaultConfig;
   }
   try {

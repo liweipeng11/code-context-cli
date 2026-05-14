@@ -8,6 +8,7 @@ export interface KeywordResult {
 }
 
 function collectMatches(content: string, regex: RegExp): string[] {
+  // 小工具：把正则中的第一个捕获组收集出来；没有捕获组时使用完整匹配。
   var result: string[] = [];
   var match: RegExpExecArray | null;
   while ((match = regex.exec(content)) !== null) {
@@ -17,6 +18,11 @@ function collectMatches(content: string, regex: RegExp): string[] {
 }
 
 export function extractCommonKeywords(content: string): KeywordResult {
+  /*
+   * 通用关键词提取：
+   * 这些规则不理解代码语义，只抓“可能有检索价值”的文本。
+   * 例如变量名、文件引用、form action、JSP include、request 参数等。
+   */
   var keywords: string[] = [];
   var links: string[] = [];
   keywords = keywords.concat(collectMatches(content, /[A-Za-z_$][A-Za-z0-9_$]*(?:[A-Z][A-Za-z0-9_$]*)?/g));
@@ -40,6 +46,12 @@ export function chunkTextFile(
   typeName: string,
   name: string | undefined
 ): CodeChunk[] {
+  /*
+   * 普通文本切分策略：
+   * - 每 maxLines 行形成一个 chunk；
+   * - 下一个 chunk 回退 overlapLines 行，保留一点上下文；
+   * - 这样函数或配置块刚好跨边界时，不至于完全断开。
+   */
   var lines = content.split(/\r?\n/);
   var maxLines = Math.max(1, config.chunk.maxLines);
   var overlapLines = Math.max(0, Math.min(config.chunk.overlapLines, maxLines - 1));

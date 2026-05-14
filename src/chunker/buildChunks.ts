@@ -8,6 +8,7 @@ import { chunkXmlFile } from "./chunkXmlFile";
 import { chunkVueFile } from "./chunkVueFile";
 
 export function languageFromPath(filePath: string): string {
+  // 语言字段只做轻量推断，主要用于 Markdown 代码块高亮。
   var ext = path.extname(filePath).toLowerCase();
   if (ext.length > 0) {
     return ext.slice(1);
@@ -16,10 +17,12 @@ export function languageFromPath(filePath: string): string {
 }
 
 export function makeChunkId(filePath: string, index: number): string {
+  // 第一版索引存在 JSON 文件里，不需要复杂 id；路径 + 序号足够稳定和可读。
   return filePath + "#" + String(index + 1);
 }
 
 export function normalizeWords(words: string[]): string[] {
+  // 去重时忽略大小写，但保留第一次出现的原始写法，便于调试和阅读索引。
   var map: { [key: string]: boolean } = {};
   var result: string[] = [];
   for (var i = 0; i < words.length; i++) {
@@ -47,6 +50,12 @@ export function createChunk(
   extraKeywords: string[],
   extraLinks: string[]
 ): CodeChunk {
+  /*
+   * 所有切分器最终都走 createChunk：
+   * - 统一补 language、id；
+   * - 统一做通用关键词提取；
+   * - 再合并各语言切分器提供的 extraKeywords/extraLinks。
+   */
   var common = extractCommonKeywords(content);
   return {
     id: makeChunkId(filePath, index),
@@ -63,6 +72,11 @@ export function createChunk(
 }
 
 export function buildChunks(filePath: string, content: string, config: CtxConfig): CodeChunk[] {
+  /*
+   * 这里是“按文件类型分发”的入口：
+   * JSP/Java/XML/Vue 有一些特殊结构，所以使用专门切分器；
+   * 其他文件用固定行数切分。
+   */
   var ext = path.extname(filePath).toLowerCase();
   if (ext === ".jsp") {
     return chunkJspFile(filePath, content, config);

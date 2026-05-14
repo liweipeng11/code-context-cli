@@ -1,6 +1,13 @@
 import { CodeChunk } from "../store/types";
 
 function hasPathBridge(a: CodeChunk, b: CodeChunk): boolean {
+  /*
+   * 轻量关系判断：
+   * 如果 chunk A 的 links 里出现了某个路径，而 chunk B 的 filePath 包含它，
+   * 就认为 A 和 B 有关联。
+   *
+   * 这用于 JSP include、form action、Struts forward 等简单场景。
+   */
   for (var i = 0; i < a.links.length; i++) {
     var link = a.links[i].toLowerCase();
     if (b.filePath.toLowerCase().indexOf(link.replace(/^\//, "")) !== -1) {
@@ -11,6 +18,7 @@ function hasPathBridge(a: CodeChunk, b: CodeChunk): boolean {
 }
 
 export function applyRelationBoost(chunks: CodeChunk[]): CodeChunk[] {
+  // 对已经命中的候选结果做二次加权，不扫描全量索引，保持实现简单。
   for (var i = 0; i < chunks.length; i++) {
     for (var n = 0; n < chunks.length; n++) {
       if (i === n) {

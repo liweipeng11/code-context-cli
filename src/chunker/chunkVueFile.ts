@@ -3,10 +3,12 @@ import { CodeChunk } from "../store/types";
 import { createChunk } from "./buildChunks";
 
 function lineNumberAt(content: string, index: number): number {
+  // 根据字符下标计算行号，用于把 template/script/style 映射回原文件行号。
   return content.slice(0, index).split(/\r?\n/).length;
 }
 
 function findBlocks(content: string, tag: string): Array<{ start: number; end: number; bodyStart: number; bodyEnd: number }> {
+  // 用正则找 SFC 中的 template/script/style 区块；第一版不解析 Vue AST。
   var result: Array<{ start: number; end: number; bodyStart: number; bodyEnd: number }> = [];
   var regex = new RegExp("<" + tag + "\\b[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "gi");
   var match: RegExpExecArray | null;
@@ -20,6 +22,11 @@ function findBlocks(content: string, tag: string): Array<{ start: number; end: n
 }
 
 export function chunkVueFile(filePath: string, content: string, config: CtxConfig): CodeChunk[] {
+  /*
+   * Vue SFC 天然分成 template/script/style 三块。
+   * 先按这三块切，script 里再额外识别 function/const/let/var 声明，
+   * 让搜索某个方法名时更容易命中具体片段。
+   */
   var chunks: CodeChunk[] = [];
   var tags = ["template", "script", "style"];
   for (var i = 0; i < tags.length; i++) {
@@ -45,6 +52,7 @@ export function chunkVueFile(filePath: string, content: string, config: CtxConfi
     }
   }
   if (chunks.length === 0) {
+    // 非标准 .vue 文件也不要丢弃，退回单 chunk。
     chunks.push(createChunk(filePath, 0, "vue", undefined, 1, content.split(/\r?\n/).length, content, [], []));
   }
   return chunks;

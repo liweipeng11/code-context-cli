@@ -1,6 +1,7 @@
 import { CodeChunk } from "../store/types";
 
 function fenceLanguage(language: string): string {
+  // Markdown 代码块语言名尽量使用常见值，方便编辑器和 LLM 阅读。
   if (language === "jsp") {
     return "jsp";
   }
@@ -17,6 +18,12 @@ function fenceLanguage(language: string): string {
 }
 
 export function buildContextMarkdown(task: string, chunks: CodeChunk[]): string {
+  /*
+   * 输出结构刻意固定：
+   * - User Task 放用户原始任务；
+   * - Selected Files 先给 LLM 一个文件清单；
+   * - Context Chunks 再逐块给出完整代码。
+   */
   var lines: string[] = [];
   lines.push("# Code Context");
   lines.push("");

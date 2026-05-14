@@ -2,6 +2,13 @@ import path = require("path");
 import { CodeChunk } from "../store/types";
 
 export function tokenizeQuery(query: string): string[] {
+  /*
+   * 第一版没有 LLM/embedding，所以 query 只能做轻量分词：
+   * - 英文、数字、下划线、路径片段按连续 token 提取；
+   * - 中文按 2 字滑窗切分，提升短语命中的概率。
+   *
+   * 例如“登录逻辑在哪里”会产生“登录”“录逻”“逻辑”等二字片段。
+   */
   var result: string[] = [];
   var english = query.match(/[A-Za-z0-9_./-]+/g);
   if (english) {
@@ -33,6 +40,7 @@ export function tokenizeQuery(query: string): string[] {
 }
 
 function includesAny(values: string[], token: string): boolean {
+  // keywords/links 里只要有一个值包含 token，就认为命中。
   for (var i = 0; i < values.length; i++) {
     if (values[i].toLowerCase().indexOf(token) !== -1) {
       return true;
@@ -42,11 +50,18 @@ function includesAny(values: string[], token: string): boolean {
 }
 
 function queryMentionsFile(query: string, filePath: string): boolean {
+  // 如果用户直接写了文件名，例如 UserDetail.jsp，要给更高权重。
   var base = path.basename(filePath).toLowerCase();
   return query.toLowerCase().indexOf(base) !== -1;
 }
 
 export function scoreChunk(chunk: CodeChunk, query: string, tokens: string[]): number {
+  /*
+   * 评分不是语义理解，只是“不同位置命中不同加权”：
+   * - 路径命中通常很强，所以 +8；
+   * - keywords/links 是提前提取的结构化线索，所以 +5；
+   * - content 全文命中噪声更高，所以 +2。
+   */
   var score = 0;
   var filePath = chunk.filePath.toLowerCase();
   var content = chunk.content.toLowerCase();
@@ -72,6 +87,7 @@ export function scoreChunk(chunk: CodeChunk, query: string, tokens: string[]): n
 }
 
 export function keywordSearch(chunks: CodeChunk[], query: string, topN: number): CodeChunk[] {
+  // 搜索结果复制一份 chunk，并把 score 放在副本上，避免污染原始索引对象。
   var tokens = tokenizeQuery(query);
   var scored: CodeChunk[] = [];
   for (var i = 0; i < chunks.length; i++) {

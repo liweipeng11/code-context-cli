@@ -9,6 +9,12 @@ import { getContextPath } from "../utils/pathUtils";
 import { info } from "../utils/logger";
 
 export function runContext(rootDir: string, query: string, topN: number): void {
+  /*
+   * context 命令可以理解为 search 的“LLM 版本”：
+   * 1. 先检索候选 chunk；
+   * 2. 根据 token 预算挑选能放进去的 chunk；
+   * 3. 生成结构化 Markdown，方便用户复制给 LLM。
+   */
   var config = loadConfig(rootDir);
   var index = loadIndex(rootDir);
   var ranked = applyRelationBoost(keywordSearch(index.chunks, query, topN));

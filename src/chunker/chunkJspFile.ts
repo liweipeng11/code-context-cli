@@ -17,6 +17,7 @@ function collect(content: string, regex: RegExp): string[] {
 }
 
 function jspType(content: string): string {
+  // 根据 chunk 内容粗略标记 JSP 片段类型，帮助 search/context 输出更可读。
   if (hasPattern(content, /<form\b/i)) {
     return "jsp-form";
   }
@@ -39,10 +40,15 @@ function jspType(content: string): string {
 }
 
 export function chunkJspFile(filePath: string, content: string, config: CtxConfig): CodeChunk[] {
+  /*
+   * JSP 文件仍然先按固定行数切分，然后对每个 chunk 做 JSP 特有信息提取。
+   * 第一版不做 AST/HTML DOM 解析，原因是要轻量、兼容 Win7、避免引入复杂依赖。
+   */
   var base = chunkTextFile(filePath, content, config, "jsp", undefined);
   var chunks: CodeChunk[] = [];
   for (var i = 0; i < base.length; i++) {
     var chunk = base[i];
+    // JSP 里的 EL、表单字段、include、iframe、弹窗 URL 都可能指向业务关联。
     var extraKeywords = collect(chunk.content, /\$\{([^}]+)\}/g)
       .concat(collect(chunk.content, /name=["']([^"']+)["']/gi))
       .concat(collect(chunk.content, /id=["']([^"']+)["']/gi));

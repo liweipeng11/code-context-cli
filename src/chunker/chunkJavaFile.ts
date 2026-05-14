@@ -4,6 +4,7 @@ import { createChunk } from "./buildChunks";
 import { chunkTextFile } from "./chunkTextFile";
 
 function findJavaName(line: string): string | undefined {
+  // 从 class/method 声明行里提取一个可读名称，用于 context.md 展示。
   var method = line.match(/\b(public|private|protected)\s+(?:static\s+)?[A-Za-z0-9_<>\[\], ?]+\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/);
   if (method) {
     return method[2];
@@ -25,6 +26,11 @@ function collect(content: string, regex: RegExp): string[] {
 }
 
 export function chunkJavaFile(filePath: string, content: string, config: CtxConfig): CodeChunk[] {
+  /*
+   * Java 第一版采用“正则粗切分”：
+   * 遇到 class/interface/enum 或 public/private/protected 方法声明就作为一个起点。
+   * 这不是完整 Java 解析器，但足够把 Action、Service 这类文件切成较有意义的块。
+   */
   var lines = content.split(/\r?\n/);
   var starts: number[] = [];
   for (var i = 0; i < lines.length; i++) {
@@ -33,6 +39,7 @@ export function chunkJavaFile(filePath: string, content: string, config: CtxConf
     }
   }
   if (starts.length === 0) {
+    // 如果没有识别到结构，就退回普通文本切分，保证任何 Java 文件都能进入索引。
     return chunkTextFile(filePath, content, config, "java", undefined);
   }
   var chunks: CodeChunk[] = [];
@@ -42,6 +49,7 @@ export function chunkJavaFile(filePath: string, content: string, config: CtxConf
     var part = lines.slice(start, end).join("\n");
     var name = findJavaName(lines[start]);
     var typeName = /\b(class|interface|enum)\s+/.test(lines[start]) ? "java-class" : "java-method";
+    // 对 Struts/Servlet 常见线索做额外提取，便于中文任务里追数据来源和 forward。
     var keywords = collect(part, /request\.getParameter\s*\(\s*["']([^"']+)["']\s*\)/g)
       .concat(collect(part, /request\.setAttribute\s*\(\s*["']([^"']+)["']\s*,/g))
       .concat(collect(part, /mapping\.findForward\s*\(\s*["']([^"']+)["']\s*\)/g))
