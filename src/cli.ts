@@ -5,6 +5,9 @@ import { runIndex } from "./commands/index";
 import { runSearch } from "./commands/search";
 import { runContext } from "./commands/context";
 import { runClean } from "./commands/clean";
+import { runChunkGet } from "./commands/chunk";
+import { runSlice } from "./commands/slice";
+import { runAround } from "./commands/around";
 import { resolveProjectPath } from "./utils/pathUtils";
 import { error } from "./utils/logger";
 
@@ -53,6 +56,46 @@ function main(): void {
     .option("-n, --top <number>", "Number of candidate chunks.", "30")
     .action(function (query: string, options: { top: string }) {
       runContext(process.cwd(), query, parseInt(options.top, 10) || 30);
+    });
+
+  var chunkCommand = program
+    .command("chunk")
+    .description("Read indexed chunks.");
+
+  chunkCommand
+    .command("get <chunkId>")
+    .description("Read one chunk by id from .ctx/index.json.")
+    .option("--json", "Print JSON output.")
+    .action(function (chunkId: string, options: { json?: boolean }) {
+      runChunkGet(process.cwd(), chunkId, Boolean(options.json));
+    });
+
+  program
+    .command("slice <filePath>")
+    .description("Read a line range from a project file.")
+    .requiredOption("--start <line>", "Start line.")
+    .requiredOption("--end <line>", "End line.")
+    .option("--json", "Print JSON output.")
+    .action(function (filePath: string, options: { start: string; end: string; json?: boolean }) {
+      runSlice(process.cwd(), filePath, parseInt(options.start, 10), parseInt(options.end, 10), Boolean(options.json));
+    });
+
+  program
+    .command("around <filePath>")
+    .description("Read lines around a target line from a project file.")
+    .requiredOption("--line <line>", "Target line.")
+    .option("--before <number>", "Lines before target line.", "30")
+    .option("--after <number>", "Lines after target line.", "30")
+    .option("--json", "Print JSON output.")
+    .action(function (filePath: string, options: { line: string; before: string; after: string; json?: boolean }) {
+      runAround(
+        process.cwd(),
+        filePath,
+        parseInt(options.line, 10),
+        parseInt(options.before, 10),
+        parseInt(options.after, 10),
+        Boolean(options.json)
+      );
     });
 
   program

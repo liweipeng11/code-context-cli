@@ -11,6 +11,7 @@ export interface CodeChunk {
   id: string;
   /** 统一使用 / 展示的相对路径，例如 src/pages/UserDetail.jsp。 */
   filePath: string;
+  fileHash: string;
   /** 根据扩展名推断出的语言，例如 jsp、java、xml、vue、ts。 */
   language: string;
   /** chunk 类型，例如 text、jsp-form、java-method、struts-action。 */
@@ -27,6 +28,7 @@ export interface CodeChunk {
   keywords: string[];
   /** 从代码中提取出的路径、action、include、forward 等关联信息。 */
   links: string[];
+  symbols?: string[];
   /** 搜索时计算出的临时分数，不一定会写入索引。 */
   score?: number;
 }
@@ -39,11 +41,26 @@ export interface IndexedFile {
   chunks: number;
 }
 
+export interface SkippedFile {
+  filePath: string;
+  size: number;
+  reason: string;
+}
+
 /** .ctx/index.json 的顶层结构。 */
 export interface CodeIndex {
-  version: string;
+  version: number;
   createdAt: string;
   rootDir: string;
   files: IndexedFile[];
+  skippedFiles: SkippedFile[];
   chunks: CodeChunk[];
+}
+
+export interface FileSlice {
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  totalLines: number;
+  content: string;
 }

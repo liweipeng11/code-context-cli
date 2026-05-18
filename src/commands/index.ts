@@ -8,21 +8,24 @@ import { fileHash } from "../utils/fileHash";
 import { info } from "../utils/logger";
 
 export function runIndex(rootDir: string): void {
-  /*
-   * 建索引的主流程：
-   * 1. 读取 .ctxrc.json，没有则使用默认配置；
-   * 2. 扫描项目文件；
-   * 3. 每个文件按类型切成 chunk；
-   * 4. 保存成 .ctx/index.json。
-   */
   var config = loadConfig(rootDir);
-  var files = scanProject(rootDir, config);
+  var scanResult = scanProject(rootDir, config);
+  var files = scanResult.files;
   var indexedFiles: IndexedFile[] = [];
   var chunks: CodeChunk[] = [];
   for (var i = 0; i < files.length; i++) {
     var file = files[i];
-    var content = fs.readFileSync(file.absolutePath, "utf8");
-    // buildChunks 会根据扩展名选择 JSP/Java/XML/Vue/普通文本切分器。
+    var content: string;
+    try {
+      content = fs.readFileSync(file.absolutePath, "utf8");
+    } catch (err) {
+      scanResult.skippedFiles.push({
+        filePath: file.relativePath,
+        size: file.size,
+        reason: "Unable to read file as utf8: " + (err instanceof Error ? err.message : String(err))
+      });
+      continue;
+    }
     var fileChunks = buildChunks(file.relativePath, content, config);
     indexedFiles.push({
       filePath: file.relativePath,
@@ -33,13 +36,17 @@ export function runIndex(rootDir: string): void {
     chunks = chunks.concat(fileChunks);
   }
   var index: CodeIndex = {
-    version: "0.1.0",
+    version: 1,
     createdAt: new Date().toISOString(),
     rootDir: rootDir,
     files: indexedFiles,
+    skippedFiles: scanResult.skippedFiles,
     chunks: chunks
   };
   saveIndex(rootDir, index);
   info("Indexed " + indexedFiles.length + " files and " + chunks.length + " chunks.");
+  if (scanResult.skippedFiles.length > 0) {
+    info("Skipped " + scanResult.skippedFiles.length + " files because of scan limits.");
+  }
   info("Wrote .ctx/index.json");
 }

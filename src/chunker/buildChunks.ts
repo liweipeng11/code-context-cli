@@ -6,23 +6,28 @@ import { chunkJspFile } from "./chunkJspFile";
 import { chunkJavaFile } from "./chunkJavaFile";
 import { chunkXmlFile } from "./chunkXmlFile";
 import { chunkVueFile } from "./chunkVueFile";
+import { fileHash } from "../utils/fileHash";
+import { toDisplayPath } from "../utils/pathUtils";
 
 export function languageFromPath(filePath: string): string {
-  // 语言字段只做轻量推断，主要用于 Markdown 代码块高亮。
   var ext = path.extname(filePath).toLowerCase();
+  if (ext === ".tsx") {
+    return "ts";
+  }
+  if (ext === ".jsx") {
+    return "js";
+  }
   if (ext.length > 0) {
     return ext.slice(1);
   }
   return "text";
 }
 
-export function makeChunkId(filePath: string, index: number): string {
-  // 第一版索引存在 JSON 文件里，不需要复杂 id；路径 + 序号足够稳定和可读。
-  return filePath + "#" + String(index + 1);
+export function makeChunkId(filePath: string, startLine: number, endLine: number): string {
+  return filePath + "#" + startLine + "-" + endLine;
 }
 
 export function normalizeWords(words: string[]): string[] {
-  // 去重时忽略大小写，但保留第一次出现的原始写法，便于调试和阅读索引。
   var map: { [key: string]: boolean } = {};
   var result: string[] = [];
   for (var i = 0; i < words.length; i++) {
@@ -48,18 +53,14 @@ export function createChunk(
   endLine: number,
   content: string,
   extraKeywords: string[],
-  extraLinks: string[]
+  extraLinks: string[],
+  extraSymbols?: string[]
 ): CodeChunk {
-  /*
-   * 所有切分器最终都走 createChunk：
-   * - 统一补 language、id；
-   * - 统一做通用关键词提取；
-   * - 再合并各语言切分器提供的 extraKeywords/extraLinks。
-   */
   var common = extractCommonKeywords(content);
   return {
-    id: makeChunkId(filePath, index),
+    id: makeChunkId(filePath, startLine, endLine),
     filePath: filePath,
+    fileHash: "",
     language: languageFromPath(filePath),
     type: type,
     name: name,
@@ -67,28 +68,38 @@ export function createChunk(
     endLine: endLine,
     content: content,
     keywords: normalizeWords(common.keywords.concat(extraKeywords)),
-    links: normalizeWords(common.links.concat(extraLinks))
+    links: normalizeWords(common.links.concat(extraLinks)),
+    symbols: normalizeWords((extraSymbols || []).concat(name ? [name] : []))
   };
 }
 
 export function buildChunks(filePath: string, content: string, config: CtxConfig): CodeChunk[] {
-  /*
-   * 这里是“按文件类型分发”的入口：
-   * JSP/Java/XML/Vue 有一些特殊结构，所以使用专门切分器；
-   * 其他文件用固定行数切分。
-   */
+  var normalizedPath = toDisplayPath(filePath);
+  if (content.length === 0) {
+    return [];
+  }
   var ext = path.extname(filePath).toLowerCase();
+  var chunks: CodeChunk[];
   if (ext === ".jsp") {
-    return chunkJspFile(filePath, content, config);
+    chunks = chunkJspFile(normalizedPath, content, config);
+  } else if (ext === ".java") {
+    chunks = chunkJavaFile(normalizedPath, content, config);
+  } else if (ext === ".xml") {
+    chunks = chunkXmlFile(normalizedPath, content, config);
+  } else if (ext === ".vue") {
+    chunks = chunkVueFile(normalizedPath, content, config);
+  } else {
+    chunks = chunkTextFile(normalizedPath, content, config, "text", undefined);
   }
-  if (ext === ".java") {
-    return chunkJavaFile(filePath, content, config);
+  var hash = fileHash(content);
+  for (var i = 0; i < chunks.length; i++) {
+    chunks[i].filePath = normalizedPath;
+    chunks[i].fileHash = hash;
+    chunks[i].language = languageFromPath(normalizedPath);
+    chunks[i].id = makeChunkId(normalizedPath, chunks[i].startLine, chunks[i].endLine);
+    chunks[i].keywords = normalizeWords(chunks[i].keywords || []);
+    chunks[i].links = normalizeWords(chunks[i].links || []);
+    chunks[i].symbols = normalizeWords(chunks[i].symbols || []);
   }
-  if (ext === ".xml") {
-    return chunkXmlFile(filePath, content, config);
-  }
-  if (ext === ".vue") {
-    return chunkVueFile(filePath, content, config);
-  }
-  return chunkTextFile(filePath, content, config, "text", undefined);
+  return chunks;
 }

@@ -97,6 +97,7 @@ export function keywordSearch(chunks: CodeChunk[], query: string, topN: number):
       var copy: CodeChunk = {
         id: chunk.id,
         filePath: chunk.filePath,
+        fileHash: chunk.fileHash,
         language: chunk.language,
         type: chunk.type,
         name: chunk.name,
@@ -105,6 +106,7 @@ export function keywordSearch(chunks: CodeChunk[], query: string, topN: number):
         content: chunk.content,
         keywords: chunk.keywords,
         links: chunk.links,
+        symbols: chunk.symbols,
         score: score
       };
       scored.push(copy);
