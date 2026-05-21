@@ -2,6 +2,7 @@ import { CtxConfig } from "../config/defaultConfig";
 import { CodeChunk } from "../store/types";
 import { createChunk } from "./buildChunks";
 import { chunkTextFile } from "./chunkTextFile";
+import { parseJspRegions } from "./jspRegionParser";
 
 function hasPattern(content: string, regex: RegExp): boolean {
   return regex.test(content);
@@ -39,6 +40,30 @@ function jspType(content: string): string {
 }
 
 export function chunkJspFile(filePath: string, content: string, config: CtxConfig): CodeChunk[] {
+  var regions = parseJspRegions(content);
+  if (regions.length > 0) {
+    var regionChunks: CodeChunk[] = [];
+    for (var r = 0; r < regions.length; r++) {
+      var region = regions[r];
+      var regionChunk = createChunk(
+        filePath,
+        r,
+        region.type,
+        region.name,
+        region.startLine,
+        region.endLine,
+        region.content,
+        region.keywords,
+        region.links,
+        region.symbols
+      );
+      regionChunk.summary = region.summary;
+      regionChunk.metadata = region.metadata;
+      regionChunks.push(regionChunk);
+    }
+    return regionChunks;
+  }
+
   var base = chunkTextFile(filePath, content, config, "jsp-text", undefined);
   var chunks: CodeChunk[] = [];
   for (var i = 0; i < base.length; i++) {

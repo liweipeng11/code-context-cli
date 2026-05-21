@@ -119,3 +119,19 @@ npm run dev -- search "login"
 ```
 
 For Windows 7 compatibility, keep dependency versions conservative and avoid dependencies that require Node 14+ or native compilation.
+
+## JSP Region Workflow
+
+For large JSP-to-Vue tasks, rebuild the index first, then let the Agent inspect and fetch one functional area at a time:
+
+```bash
+ctx index .
+ctx jsp regions src/pages/UserDetail.jsp --json
+ctx jsp region src/pages/UserDetail.jsp --id query-form-120 --with-related --json
+```
+
+`ctx jsp regions` lists indexed JSP regions such as forms, tables, dialog-like divs, directives, and script functions. Each result includes `metadata.regionId`, line range, symbols, links, DOM ids, form actions, event handlers, and JSP variables.
+
+`ctx jsp region` returns one region. With `--with-related`, it also returns related chunks such as JSP directives/includes, same-file script functions referenced by event handlers, and linked files already present in the index.
+
+This lets an LLM request only the code needed for the current Vue section instead of reading a whole 3000-line JSP.

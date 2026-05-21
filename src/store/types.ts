@@ -18,6 +18,7 @@ export interface CodeChunk {
   type: string;
   /** 可选名称，例如 Java 方法名、class 名、Struts action path。 */
   name?: string;
+  summary?: string;
   /** chunk 在原文件中的起始行号，从 1 开始。 */
   startLine: number;
   /** chunk 在原文件中的结束行号。 */
@@ -29,8 +30,47 @@ export interface CodeChunk {
   /** 从代码中提取出的路径、action、include、forward 等关联信息。 */
   links: string[];
   symbols?: string[];
+  metadata?: {
+    regionId?: string;
+    regionType?: string;
+    regionName?: string;
+    parentRegionId?: string;
+    domIds?: string[];
+    formActions?: string[];
+    fields?: string[];
+    buttons?: string[];
+    tableColumns?: string[];
+    jsFunctions?: string[];
+    events?: string[];
+    jspVars?: string[];
+    jspScriptlets?: string[];
+    jstlVars?: string[];
+    includePaths?: string[];
+    externalJs?: string[];
+    externalCss?: string[];
+  };
   /** 搜索时计算出的临时分数，不一定会写入索引。 */
   score?: number;
+  scoreDetails?: SearchScoreDetails;
+  matchReasons?: SearchMatchReason[];
+}
+
+export interface SearchMatchReason {
+  field: string;
+  token: string;
+  weight: number;
+  detail: string;
+}
+
+export interface SearchScoreDetails {
+  keyword: number;
+  path: number;
+  filename: number;
+  symbol: number;
+  metadata: number;
+  bm25: number;
+  relation: number;
+  total: number;
 }
 
 /** 索引中记录的文件级信息，用来辅助判断文件是否变化和展示统计。 */

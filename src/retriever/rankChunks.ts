@@ -8,8 +8,9 @@ function hasPathBridge(a: CodeChunk, b: CodeChunk): boolean {
    *
    * 这用于 JSP include、form action、Struts forward 等简单场景。
    */
-  for (var i = 0; i < a.links.length; i++) {
-    var link = a.links[i].toLowerCase();
+  var links = a.links || [];
+  for (var i = 0; i < links.length; i++) {
+    var link = links[i].toLowerCase();
     if (b.filePath.toLowerCase().indexOf(link.replace(/^\//, "")) !== -1) {
       return true;
     }
@@ -25,7 +26,22 @@ export function applyRelationBoost(chunks: CodeChunk[]): CodeChunk[] {
         continue;
       }
       if (hasPathBridge(chunks[i], chunks[n])) {
-        chunks[i].score = (chunks[i].score || 0) + 10;
+        var chunk = chunks[i];
+        chunk.score = (chunk.score || 0) + 10;
+        var details = chunk.scoreDetails;
+        if (details) {
+          details.relation = (details.relation || 0) + 10;
+          details.total = chunk.score || 0;
+        }
+        var reasons = chunk.matchReasons;
+        if (reasons) {
+          reasons.push({
+            field: "relation",
+            token: chunks[n].filePath,
+            weight: 10,
+            detail: "linked path is also present in the candidate set"
+          });
+        }
       }
     }
   }

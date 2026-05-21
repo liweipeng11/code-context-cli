@@ -92,11 +92,19 @@ export function buildChunks(filePath: string, content: string, config: CtxConfig
     chunks = chunkTextFile(normalizedPath, content, config, "text", undefined);
   }
   var hash = fileHash(content);
+  var usedIds: { [key: string]: number } = {};
   for (var i = 0; i < chunks.length; i++) {
     chunks[i].filePath = normalizedPath;
     chunks[i].fileHash = hash;
     chunks[i].language = languageFromPath(normalizedPath);
-    chunks[i].id = makeChunkId(normalizedPath, chunks[i].startLine, chunks[i].endLine);
+    var chunkId = makeChunkId(normalizedPath, chunks[i].startLine, chunks[i].endLine);
+    if (usedIds[chunkId]) {
+      usedIds[chunkId]++;
+      chunkId = chunkId + ":" + usedIds[chunkId];
+    } else {
+      usedIds[chunkId] = 1;
+    }
+    chunks[i].id = chunkId;
     chunks[i].keywords = normalizeWords(chunks[i].keywords || []);
     chunks[i].links = normalizeWords(chunks[i].links || []);
     chunks[i].symbols = normalizeWords(chunks[i].symbols || []);

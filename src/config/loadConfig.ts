@@ -30,7 +30,8 @@ export function loadConfig(rootDir: string): CtxConfig {
     return defaultConfig;
   }
   try {
-    var parsed = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    var content = fs.readFileSync(configPath, "utf8").replace(/^\uFEFF/, "");
+    var parsed = JSON.parse(content);
     return mergeConfig(parsed);
   } catch (err) {
     throw new Error("Failed to read .ctxrc.json: " + (err instanceof Error ? err.message : String(err)));

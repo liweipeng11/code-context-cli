@@ -8,6 +8,7 @@ import { runClean } from "./commands/clean";
 import { runChunkGet } from "./commands/chunk";
 import { runSlice } from "./commands/slice";
 import { runAround } from "./commands/around";
+import { runJspContext, runJspMap, runJspRegion, runJspRegions } from "./commands/jsp";
 import { resolveProjectPath } from "./utils/pathUtils";
 import { error } from "./utils/logger";
 
@@ -45,9 +46,10 @@ function main(): void {
     .command("search <query>")
     .description("Search indexed chunks.")
     .option("-n, --top <number>", "Number of chunks to show.", "10")
-    .action(function (query: string, options: { top: string }) {
+    .option("--json", "Print JSON output.")
+    .action(function (query: string, options: { top: string; json?: boolean }) {
       // search/context 默认读取当前目录下的 .ctx/index.json。
-      runSearch(process.cwd(), query, parseInt(options.top, 10) || 10);
+      runSearch(process.cwd(), query, parseInt(options.top, 10) || 10, Boolean(options.json));
     });
 
   program
@@ -96,6 +98,46 @@ function main(): void {
         parseInt(options.after, 10),
         Boolean(options.json)
       );
+    });
+
+  var jspCommand = program
+    .command("jsp")
+    .description("Inspect JSP functional regions.");
+
+  jspCommand
+    .command("map <filePath>")
+    .description("Build a compact page map for one JSP file.")
+    .option("--json", "Print JSON output.")
+    .action(function (filePath: string, options: { json?: boolean }) {
+      runJspMap(process.cwd(), filePath, Boolean(options.json));
+    });
+
+  jspCommand
+    .command("regions <filePath>")
+    .description("List functional regions in one indexed JSP file.")
+    .option("--json", "Print JSON output.")
+    .action(function (filePath: string, options: { json?: boolean }) {
+      runJspRegions(process.cwd(), filePath, Boolean(options.json));
+    });
+
+  jspCommand
+    .command("region <filePath>")
+    .description("Read one JSP functional region by region id.")
+    .requiredOption("--id <id>", "Region id from ctx jsp regions.")
+    .option("--with-related", "Include related chunks from the same JSP and linked files.")
+    .option("--json", "Print JSON output.")
+    .action(function (filePath: string, options: { id: string; withRelated?: boolean; json?: boolean }) {
+      runJspRegion(process.cwd(), filePath, options.id, Boolean(options.withRelated), Boolean(options.json));
+    });
+
+  jspCommand
+    .command("context <filePath>")
+    .description("Build a budgeted JSP region context with related chunks.")
+    .requiredOption("--region <id>", "Region id from ctx jsp regions.")
+    .option("--max-tokens <number>", "Maximum estimated tokens for JSON output.", "8000")
+    .option("--json", "Print JSON output.")
+    .action(function (filePath: string, options: { region: string; maxTokens: string; json?: boolean }) {
+      runJspContext(process.cwd(), filePath, options.region, parseInt(options.maxTokens, 10) || 8000, Boolean(options.json));
     });
 
   program
